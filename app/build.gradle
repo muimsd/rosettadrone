@@ -82,12 +82,18 @@ android {
         exclude 'META-INF/rxjava.properties'
         exclude 'assets/location_map_gps_locked.png'
         exclude 'assets/location_map_gps_3d.png'
+
+        // NDK 26 removed the gcc-era arm-linux-androideabi-strip that AGP
+        // 3.6.4's stripDebugSymbols invokes, so skip stripping all libs.
+        doNotStrip "**/*.so"
     }
-    externalNativeBuild {
-        cmake {
-            path 'CMakeLists.txt'
-        }
-    }
+    // cmake build disabled: prebuilt libffmpeg.so + libdjivideojni.so are
+    // shipped via src/main/jniLibs instead (avoids needing NDK 22 + cmake).
+    // externalNativeBuild {
+    //     cmake {
+    //         path 'CMakeLists.txt'
+    //     }
+    // }
     defaultConfig {
         ndk {
             // DJI has removed 'x86' support
@@ -103,7 +109,7 @@ android {
 
     // We need to be restrict as we get error on newer versions...
     //   buildToolsVersion '30.0.2'
-    ndkVersion '22.0.7026061'
+    ndkVersion '26.1.10909125'
    android {
         lintOptions {
             abortOnError false //Required, due to lack of support of gradle 7
