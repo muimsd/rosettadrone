@@ -1755,6 +1755,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             return;
                         }
 
+                        Log.i("RDdiag", "GCS RX " + dp.getLength() + "B from " + dp.getAddress() + ":" + dp.getPort());
+
                         byte[] bytes = dp.getData();
                         int[] ints = new int[bytes.length];
                         for (int i = 0; i < bytes.length; i++)
@@ -1766,6 +1768,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                                 if (packet != null) {
                                     MAVLinkMessage msg = packet.unpack();
+                                    Log.i("RDdiag", "GCS msgid=" + msg.msgid);
                                     if (this.mainActivity.prefs.getBoolean("pref_log_mavlink", false))
                                         this.mainActivity.logMessageFromGCS(msg.toString());
 
