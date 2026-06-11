@@ -652,6 +652,9 @@ public class MAVLinkReceiver {
 
         boolean triggerDistanceEnabled = false;
         float triggerDistance = 0;
+        // Set when any waypoint carries a param3 corner radius — forces
+        // CURVED flight path mode regardless of the app preference.
+        boolean gcsCurvedPath = false;
 
         if(mModel.useMissionManager) {
             mModel.missionManager.setMission(mMissionItemList);
@@ -739,8 +742,14 @@ public class MAVLinkReceiver {
                         if (m.param2 > 0)
                             currentWP.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int) (m.param2 * 180.0 / 3.141592))); // +-180 deg...
 
-                        // This is set in the RosettaDrone2 settings...
-                        if (curvedFlightPath) {
+                        // Per-waypoint corner radius from MAVLink param3
+                        // (pass radius): > 0 = fly a smooth curve through this
+                        // waypoint without stopping; overrides the static app
+                        // preference when the GCS supplies it.
+                        if (m.param3 > 0) {
+                            currentWP.cornerRadiusInMeters = Math.max(0.2f, m.param3);
+                            gcsCurvedPath = true;
+                        } else if (curvedFlightPath) {
                             currentWP.cornerRadiusInMeters = flightPathRadius;
                         }
 
@@ -860,6 +869,10 @@ public class MAVLinkReceiver {
                     denyMissionItem();
                     return;
                 }
+            }
+
+            if (gcsCurvedPath && !triggerDistanceEnabled) {
+                mBuilder.flightPathMode(WaypointMissionFlightPathMode.CURVED);
             }
 
             logWaypointstoRD(correctedWps);

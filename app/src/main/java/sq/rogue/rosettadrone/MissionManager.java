@@ -120,7 +120,17 @@ public class MissionManager {
 						wpDelay = (int) m.param1;
 
 						flyTo(m.x / 10000000.0, m.y / 10000000.0, getAbsAltitude(m));
-						waitReachLocation();
+						// Corner radius (param3) from the GCS: > 0 means don't
+						// stop here — once within the radius, roll straight
+						// into the next leg (startMotion swaps the target
+						// without cancelling the running virtual-stick motion,
+						// so the aircraft flies a smooth curve). 0 keeps the
+						// stop-and-turn-in-place behaviour.
+						if (m.param3 > 0 && nextIsNavWaypoint(wpNum)) {
+							waitNearLocation(m.param3);
+						} else {
+							waitReachLocation();
+						}
 						break;
 
 					case MAV_CMD.MAV_CMD_DO_SET_ROI:
@@ -233,6 +243,24 @@ public class MissionManager {
 			// Wait until reaching destination
 			while (droneModel.inMotion()) {
 				wait("to reach destination");
+			}
+		}
+
+		// True when the upcoming mission item is another plain waypoint —
+		// the only case where an early (corner-radius) advance is safe.
+		// Before actions/land/RTL the aircraft must fully stop first.
+		boolean nextIsNavWaypoint(int idx) {
+			return idx < missionItems.size()
+					&& missionItems.get(idx).command == MAV_CMD.MAV_CMD_NAV_WAYPOINT;
+		}
+
+		// Wait until within `radius` meters of the current motion target (or
+		// until the motion ends on its own), then return WITHOUT stopping —
+		// the caller immediately flies the next leg.
+		void waitNearLocation(double radius) throws InterruptedException {
+			while (droneModel.inMotion()
+					&& droneModel.getMotionRemainingDistance() > radius) {
+				wait("to get near destination");
 			}
 		}
 

@@ -187,6 +187,10 @@ public class DroneModel implements CommonCallbacks.CompletionCallback {
 
     private MotionTask motionTask = null;
     private Timer motionTimer = null;
+    // Live distance (m) to the current motion target, updated every MotionTask
+    // tick. Lets MissionManager advance to the next waypoint early (corner
+    // radius pass-through) without waiting for a full stop.
+    private volatile double motionRemainingDistance = Double.MAX_VALUE;
     private Rotation m_ServoSet;
     private float m_ServoPos_pitch = 0;
     private float m_ServoPos_yaw = 0;
@@ -2238,6 +2242,12 @@ public class DroneModel implements CommonCallbacks.CompletionCallback {
         return motionTimer != null;
     }
 
+    /** Distance (m) left to the current motion target (MAX_VALUE before the
+     *  first MotionTask tick of a motion). */
+    public double getMotionRemainingDistance() {
+        return motionRemainingDistance;
+    }
+
     public void startMotion(Motion motion) {
         if(System.currentTimeMillis() < timerIgnoreMavLink) return;
 
@@ -2253,6 +2263,7 @@ public class DroneModel implements CommonCallbacks.CompletionCallback {
         setVirtualSticksEnabled(true);
         setControlModes();
 
+        motionRemainingDistance = Double.MAX_VALUE; // until the first tick
         this.motion = motion;
         synchronized (this) {
             if (motionTimer == null) {
@@ -2330,6 +2341,7 @@ public class DroneModel implements CommonCallbacks.CompletionCallback {
 
             // Distance to destination
             double dist = getMetersBetweenWaypoints(destX, destY, destZ, lat, lng, alt);
+            motionRemainingDistance = dist;
 
             // Look at
             boolean lookAt = motion.yawDirection == YawDirection.DEST || motion.yawDirection == YawDirection.POI;
